@@ -1,0 +1,32 @@
+[
+  {
+    "id": "case-01-acme-senior-backend",
+    "jd": "Senior Backend Engineer\n\nAcme Robotics is looking for a Senior Backend Engineer to join our platform team.\n\nRequirements:\n- 5+ years of experience with Node.js and TypeScript (required)\n- Required: strong experience designing REST APIs at scale\n- Must have experience with PostgreSQL or similar relational databases\n- Experience mentoring junior engineers\n- Nice to have: experience with Kubernetes\n- Bonus points for prior robotics or IoT experience\n\nYou will design and own core services powering our warehouse robots, and mentor two junior engineers on the team.",
+    "company_url": "http://localhost:8099/acme/",
+    "days": 5
+  },
+  {
+    "id": "case-02-globex-no-hiring-page",
+    "jd": "Backend Engineer\n\nGlobex Inc needs a Backend Engineer. Required: 3+ years with Java. Nice to have: Spring Boot experience.",
+    "company_url": "http://localhost:8099/globex/",
+    "days": 3
+  },
+  {
+    "id": "case-03-thin-stub",
+    "jd": "Software Engineer. Apply now.",
+    "company_url": "http://localhost:8099/acme/",
+    "days": 2
+  },
+  {
+    "id": "case-04-unreachable-company",
+    "jd": "Frontend Engineer\n\nWe need a Frontend Engineer with 4+ years of React experience (required). Nice to have: design systems experience.",
+    "company_url": "http://localhost:8099/does-not-exist/",
+    "days": 4
+  },
+  {
+    "id": "case-05-one-day-cram",
+    "jd": "Staff Engineer\n\nRequired: 8+ years of distributed systems experience. Required: proven system design leadership. Must have: experience running incident response. Nice to have: public speaking experience.",
+    "company_url": "http://localhost:8099/acme/",
+    "days": 1
+  }
+]
