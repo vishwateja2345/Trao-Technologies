@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.next/
+.env
+.env.local
+*.log
+coverage/
+.DS_Store
+*.tsbuildinfo
+/tmp/
+server/dist/
+web/.next/
+web/out/

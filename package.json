@@ -1,0 +1,20 @@
+{
+  "name": "ai-interview-prep-kit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The AI Interview Prep Kit - turns a job description + company site into a structured, editable interview prep kit",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace server",
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace server && npm run build --workspace web",
+    "test": "npm run test --workspace server",
+    "evaluate": "npm run evaluate --workspace server --"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
