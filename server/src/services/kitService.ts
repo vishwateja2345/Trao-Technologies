@@ -68,15 +68,21 @@ export async function runGenerationForKit(kitId: string): Promise<void> {
   kit.status = "researching";
   await kit.save();
 
-  try {
-    const result = await runPipeline(
-      { jd: kit.input.jd, companyUrl: kit.input.company_url, days: kit.input.days },
-      (step) => {
-        // Persist progress incrementally so the frontend's poll shows
-        // real, in-flight step status rather than an opaque spinner.
-        void Kit.updateOne({ _id: kitId }, { $push: { generationSteps: step }, $set: { status: "generating" } }).catch(() => {});
-      }
+  // Step-progress writes happen via a raw updateOne (not kit.save()) so they
+  // land immediately for the frontend's poll without racing the big final
+  // save. They're chained sequentially and awaited before that final save
+  // runs, so the last write to land in MongoDB is always the authoritative
+  // final status — not whichever progress update happened to resolve last.
+  let stepWriteChain: Promise<unknown> = Promise.resolve();
+  const onStep = (step: Awaited<ReturnType<typeof runPipeline>>["steps"][number]) => {
+    stepWriteChain = stepWriteChain.then(() =>
+      Kit.updateOne({ _id: kitId }, { $push: { generationSteps: step }, $set: { status: "generating" } }).catch(() => {})
     );
+  };
+
+  try {
+    const result = await runPipeline({ jd: kit.input.jd, companyUrl: kit.input.company_url, days: kit.input.days }, onStep);
+    await stepWriteChain;
 
     kit.status = result.status;
     kit.source = result.kit.source;
@@ -91,6 +97,7 @@ export async function runGenerationForKit(kitId: string): Promise<void> {
       result.warnings.length > 0 ? result.warnings.map((w) => `[${w.step}] ${w.message}`).join(" | ") : null;
     await kit.save();
   } catch (err) {
+    await stepWriteChain;
     kit.status = "failed";
     kit.failureReason =
       err instanceof PipelineFatalError ? `${err.code}: ${err.message}` : `UNEXPECTED_ERROR: ${String(err)}`;

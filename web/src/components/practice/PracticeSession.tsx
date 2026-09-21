@@ -15,6 +15,11 @@ export function PracticeSession({ kitId }: { kitId: string }) {
   const queryClient = useQueryClient();
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  // Cards answered in this session, tracked locally so "covered so far"
+  // updates immediately without refetching (a mid-session refetch would
+  // re-sort the queue under the user's feet, since order depends on
+  // confidence).
+  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["practice-queue", kitId],
@@ -26,7 +31,10 @@ export function PracticeSession({ kitId }: { kitId: string }) {
   });
 
   const queue = useMemo(() => data?.queue ?? [], [data]);
-  const coveredCount = useMemo(() => queue.filter((c) => c.times_reviewed > 0).length, [queue]);
+  const coveredCount = useMemo(
+    () => queue.filter((c) => c.times_reviewed > 0 || answeredIds.has(c.flashcard_id)).length,
+    [queue, answeredIds]
+  );
 
   if (isLoading) return <Spinner label="Loading your flashcards…" />;
   if (isError) return <p className="text-sm text-red-600">Could not load flashcards for practice.</p>;
@@ -46,6 +54,7 @@ export function PracticeSession({ kitId }: { kitId: string }) {
           onClick={() => {
             setIndex(0);
             setRevealed(false);
+            setAnsweredIds(new Set());
             queryClient.invalidateQueries({ queryKey: ["practice-queue", kitId] });
           }}
         >
@@ -59,6 +68,7 @@ export function PracticeSession({ kitId }: { kitId: string }) {
 
   function onConfidence(confidence: number) {
     recordMutation.mutate({ flashcard_id: card.flashcard_id, confidence });
+    setAnsweredIds((prev) => new Set(prev).add(card.flashcard_id));
     setRevealed(false);
     setIndex((i) => i + 1);
   }
