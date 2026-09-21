@@ -5,7 +5,8 @@ build/
 .env
 .env.local
 *.log
-coverage/
+/server/coverage/
+/web/coverage/
 .DS_Store
 *.tsbuildinfo
 /tmp/
