@@ -41,7 +41,7 @@ export interface RetryOptions {
   onRetry?: (attempt: number, err: unknown, delayMs: number) => void;
 }
 
-/** Exponential backoff with jitter. Used for both HTTP fetches and LLM calls. */
+/** Exponential backoff with jitter, honouring a provider's Retry-After hint when present. */
 export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions): Promise<T> {
   const { retries, baseDelayMs = 500, maxDelayMs = 15_000, isRetryable = () => true, onRetry } = opts;
   let lastErr: unknown;
@@ -51,9 +51,16 @@ export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions): Pr
     } catch (err) {
       lastErr = err;
       if (attempt === retries || !isRetryable(err)) throw err;
-      const exp = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
-      const jitter = Math.random() * exp * 0.3;
-      const delay = exp + jitter;
+      const retryAfterMs = (err as { retryAfterMs?: number })?.retryAfterMs;
+      let delay: number;
+      if (typeof retryAfterMs === "number" && retryAfterMs > 0) {
+        // The provider told us exactly how long to wait — respect that
+        // over our own guess, capped so one bad hint can't stall forever.
+        delay = Math.min(retryAfterMs, maxDelayMs * 2);
+      } else {
+        const exp = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
+        delay = exp + Math.random() * exp * 0.3;
+      }
       onRetry?.(attempt + 1, err, delay);
       await sleep(delay);
     }

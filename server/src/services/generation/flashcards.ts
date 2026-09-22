@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getLLMClient } from "./llmClientFactory.js";
-import { extractJson } from "./openRouterClient.js";
+import { extractJson } from "./jsonExtract.js";
 import { nextId } from "../../utils/ids.js";
 import type { Flashcard, Requirement } from "../../types/kit.js";
 

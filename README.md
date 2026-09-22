@@ -16,7 +16,7 @@ Built for the Trao "AI Interview Prep Kit" full-stack assessment (brief
 | Backend | Node.js + Express + TypeScript | Matches the preferred stack. Plain Express (no framework magic) keeps the retrieval/generation/scheduling/persistence layering explicit. |
 | Database | MongoDB (Mongoose) | Matches the preferred stack. A kit's shape is a nested document, which maps naturally onto MongoDB rather than a normalised relational schema. |
 | Scraping | Native `fetch` + `cheerio` + `robots-parser` | No headless browser needed — company marketing/careers pages are static HTML. cheerio gives jQuery-style DOM querying for link ranking. |
-| LLM | **OpenRouter**, model `meta-llama/llama-3.1-8b-instruct:free` (configurable) | Genuine free tier, no payment method required, OpenAI-compatible chat-completions API. See §3 for the pluggable client design. |
+| LLM | **DeepSeek** (`deepseek-chat`) or **OpenRouter** (free-tier models), pluggable | One OpenAI-compatible client supports either; see §4 for why both are offered and the design of the pluggable client. |
 | Tests | Vitest | Fast, native ESM/TS support, no extra config beyond `vitest.config.ts`. |
 
 Everything is TypeScript. No other language/runtime is used.
@@ -32,7 +32,7 @@ server/                 Express API + pipeline + batch entry point
     routes/              auth.ts, kits.ts (thin controllers)
     services/
       retrieval/          URL safety (SSRF guard), robots.txt, page fetch+clean, crawler, discussion search
-      generation/          LLM client (OpenRouter + mock), prompt-injection fencing, extraction, brief, questions, flashcards
+      generation/          LLM client (DeepSeek + OpenRouter + mock), prompt-injection fencing, extraction, brief, questions, flashcards
       coverage/            deterministic coverage checker
       scheduling/          deterministic day-by-day allocator
       validation/          Zod schema mirroring Appendix A exactly
@@ -68,13 +68,17 @@ npm run dev:web                   # http://localhost:3000
 ```
 
 Visit `http://localhost:3000`, register an account, and create a kit. With no
-`OPENROUTER_API_KEY` set, `LLM_PROVIDER` defaults to `mock`: the full pipeline
-runs end-to-end with deterministic, template-based content instead of real
-model output, so you can exercise every feature (auth, crawling, coverage
-loop, builder, practice mode, batch entry point) without any API key or
-network cost. **Set `LLM_PROVIDER=openrouter` and a real
-`OPENROUTER_API_KEY`** (free at https://openrouter.ai/keys) to get real
-generation quality — this is what the deployed instance uses.
+LLM key set, `LLM_PROVIDER` defaults to `mock`: the full pipeline runs
+end-to-end with deterministic, template-based content instead of real model
+output, so you can exercise every feature (auth, crawling, coverage loop,
+builder, practice mode, batch entry point) without any API key or network
+cost. **Set `LLM_PROVIDER=deepseek` + `DEEPSEEK_API_KEY`, or
+`LLM_PROVIDER=openrouter` + `OPENROUTER_API_KEY`** to get real generation
+quality — this is what the deployed instance uses. Verified locally: a
+real run against DeepSeek produces specific, non-generic questions (e.g. a
+TypeScript-generics question for a "5+ years Node.js/TypeScript"
+requirement, not a templated one) and a company brief that correctly
+folds in the crawled hiring-process details.
 
 ### The batch entry point
 
@@ -100,8 +104,9 @@ ALLOW_PRIVATE_HOSTS=true npm run evaluate -- --input fixtures/sample-cases.json 
 the edge cases the brief calls out: a normal case, a company with no hiring
 page anywhere on it, a two-line JD stub, an unreachable company URL, and a
 1-day cram schedule. On this machine, all five complete in **~5–6 seconds**
-in mock mode (comfortably inside the 15-minute budget even with real,
-rate-limited LLM calls and retries).
+in mock mode, and in **~38 seconds with real `LLM_PROVIDER=deepseek`
+generation** (verified run, all 5 `ok`) — comfortably inside the 15-minute
+budget with wide margin for a slower/more rate-limited provider.
 
 `ALLOW_PRIVATE_HOSTS=true` is required only because the fixture server runs
 on localhost — the SSRF guard blocks loopback/private addresses by default
@@ -127,12 +132,23 @@ README's final section._
 
 ## 4. LLM provider
 
-**OpenRouter**, default model `meta-llama/llama-3.1-8b-instruct:free`
-(swap via `OPENROUTER_MODEL`; any OpenRouter free-tier model works, e.g.
-`google/gemini-2.0-flash-exp:free`). OpenRouter was chosen because it has a
-genuinely free tier with no payment method on file, an OpenAI-compatible
-`/chat/completions` endpoint (so the client code is a single small class),
-and clear `429` rate-limit signalling.
+**DeepSeek** (`deepseek-chat`) and **OpenRouter** (free-tier models, e.g.
+`nvidia/nemotron-3-super-120b-a12b:free`) are both supported through one
+`OpenAICompatibleClient`, since both speak the same OpenAI-style
+`/chat/completions` shape — switch between them with `LLM_PROVIDER`
+(`deepseek` | `openrouter` | `mock`). The deployed instance runs on
+whichever of the two is configured in its environment; see
+`server/.env.example` for both.
+
+In practice, testing this end-to-end surfaced a real, brief-relevant
+observation: OpenRouter's shared free-tier pool is frequently
+"temporarily rate-limited upstream" for popular models (a plain `429`),
+independent of anything this app does — exactly the failure mode Section
+10 asks for a plan for. DeepSeek's API isn't a metered free tier (it needs
+a small prepaid balance, effectively pennies per run) but is fast and
+reliable, so it's offered as an equally-supported alternative rather than
+forcing a single point of failure. Both paths go through the identical
+retry/backoff/fallback logic below.
 
 ### Handling free-tier rate limits (tokens-per-minute, not just requests)
 
@@ -140,15 +156,15 @@ and clear `429` rate-limit signalling.
   minimum spacing (`LLM_MIN_INTERVAL_MS`, default 1.5s) between requests,
   regardless of how many pipeline steps fire concurrently.
 - On `429`/`5xx`/timeout, `withRetry` backs off exponentially with jitter
-  (`LLM_MAX_RETRIES`, default 4), honouring a `Retry-After` header when the
-  provider sends one.
+  (`LLM_MAX_RETRIES`, default 4) — and **honours a `Retry-After` header
+  when the provider sends one**, using that exact wait instead of guessing.
 - If the model returns unparsable JSON, we send one corrective follow-up
   ("reply again with ONLY valid JSON…") before giving up on that call.
 - If a call still fails after all of that (provider down, sustained rate
   limiting), the client **falls back to the same deterministic heuristic
   used by the mock provider** for that one step, rather than failing the
   whole kit. This is why the app can promise "the run completes" even under
-  provider flakiness — see `openRouterClient.ts`.
+  provider flakiness — see `openAICompatibleClient.ts`.
 
 ## 5. High-level architecture
 
@@ -401,8 +417,19 @@ cleanly if you'd rather not have your laptop open in the waiting room.
 - **Mock LLM provider as the default** — lets the entire pipeline, builder,
   and batch entry point be built, tested, and demoed with zero API key and
   zero network flakiness; real generation quality requires setting
-  `LLM_PROVIDER=openrouter` with a real (free) key, which is what the
+  `LLM_PROVIDER=deepseek` or `openrouter` with a real key, which is what the
   deployed instance and the final batch run use.
+- **Supporting two LLM providers behind one client**, not just OpenRouter —
+  during development, OpenRouter's shared free-tier pool returned `429
+  temporarily rate-limited upstream` for every popular free model under
+  real testing, independent of this app's own throttling. Rather than
+  block on that, `OpenAICompatibleClient` is parameterised so DeepSeek
+  (cheap, fast, reliable — not a metered free tier, but a few cents of
+  prepaid balance) is an equally-supported path. Both exercise identical
+  retry/backoff/repair/fallback logic; this is a direct, evidence-based
+  response to the brief's warning that "a pipeline that falls over the
+  first time a provider says 'slow down' is the most common way to lose
+  points here."
 - **Confidence-weighted practice ordering, not spaced-repetition intervals**
   — simpler to reason about and to test, and the brief explicitly allows
   it; a card never reviewed is treated as needing attention *before* a card

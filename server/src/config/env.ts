@@ -19,10 +19,14 @@ const envSchema = z.object({
 
   // LLM provider. "mock" needs no key and is used for local dev / CI so the
   // rest of the pipeline can be built and tested without burning quota.
-  LLM_PROVIDER: z.enum(["openrouter", "mock"]).default("mock"),
+  LLM_PROVIDER: z.enum(["openrouter", "deepseek", "mock"]).default("mock"),
   OPENROUTER_API_KEY: z.string().optional(),
-  OPENROUTER_MODEL: z.string().default("meta-llama/llama-3.1-8b-instruct:free"),
+  OPENROUTER_MODEL: z.string().default("nvidia/nemotron-3-super-120b-a12b:free"),
   OPENROUTER_BASE_URL: z.string().default("https://openrouter.ai/api/v1"),
+
+  DEEPSEEK_API_KEY: z.string().optional(),
+  DEEPSEEK_MODEL: z.string().default("deepseek-chat"),
+  DEEPSEEK_BASE_URL: z.string().default("https://api.deepseek.com"),
 
   // Retrieval / security
   ALLOW_PRIVATE_HOSTS: z

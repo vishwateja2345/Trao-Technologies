@@ -21,10 +21,14 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: LLM_PROVIDER
-        value: openrouter
+        value: deepseek # or "openrouter" — see server/.env.example for both options
+      - key: DEEPSEEK_API_KEY
+        sync: false # your own DeepSeek key — never committed
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat
       - key: OPENROUTER_API_KEY
-        sync: false # your own free-tier OpenRouter key — never committed
+        sync: false # only used if LLM_PROVIDER=openrouter
       - key: OPENROUTER_MODEL
-        value: meta-llama/llama-3.1-8b-instruct:free
+        value: nvidia/nemotron-3-super-120b-a12b:free
       - key: ALLOW_PRIVATE_HOSTS
         value: "false"

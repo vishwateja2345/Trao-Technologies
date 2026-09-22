@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getLLMClient } from "./llmClientFactory.js";
-import { extractJson } from "./openRouterClient.js";
+import { extractJson } from "./jsonExtract.js";
 import { fenceUntrusted } from "./promptSafety.js";
 import type { FetchedPage } from "../retrieval/fetchPage.js";
 

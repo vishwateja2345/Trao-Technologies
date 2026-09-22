@@ -1,45 +1,41 @@
-import { env } from "../../config/env.js";
 import { withRetry, Throttle } from "../../utils/concurrency.js";
-import { LLMGenerationError, type CompleteJSONParams, type LLMClient } from "./llmClient.js";
-
-/**
- * Extracts a JSON object from raw model text. Models on free-tier instruct
- * models frequently wrap JSON in markdown fences or add a stray sentence
- * before/after — we strip fences and take the outermost balanced {...}
- * rather than failing on the first non-JSON character.
- */
-export function extractJson(raw: string): unknown {
-  let text = raw.trim();
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced) text = fenced[1].trim();
-
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error("no JSON object found in model output");
-  }
-  const candidate = text.slice(start, end + 1);
-  return JSON.parse(candidate);
-}
+import type { CompleteJSONParams, LLMClient } from "./llmClient.js";
 
 const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 
+export interface OpenAICompatibleConfig {
+  /** Short label used in logs, e.g. "openrouter" or "deepseek". */
+  providerName: string;
+  baseUrl: string;
+  apiKey: string | undefined;
+  model: string;
+  minIntervalMs: number;
+  maxRetries: number;
+}
+
 /**
- * Rate-limit handling: free-tier providers enforce tokens-per-minute, not
- * just requests-per-minute, and return 429 with (sometimes) a Retry-After
- * header. We throttle every call to a minimum spacing AND honour
- * Retry-After / exponential backoff on top of that, so a burst of
- * generation calls degrades to "slower" rather than "broken".
+ * Client for any provider that speaks the OpenAI chat-completions shape —
+ * which covers both supported providers (OpenRouter and DeepSeek) with one
+ * implementation. Rate-limit handling: free tiers enforce tokens-per-minute,
+ * not just requests-per-minute, and return 429 with (sometimes) a
+ * Retry-After header. Every call is throttled to a minimum spacing AND
+ * backs off exponentially (honouring Retry-After when the provider sends
+ * one — see utils/concurrency.ts) on top of that, so a burst of generation
+ * calls degrades to "slower", never "broken".
  */
-export class OpenRouterClient implements LLMClient {
-  private throttle = new Throttle(env.LLM_MIN_INTERVAL_MS);
+export class OpenAICompatibleClient implements LLMClient {
+  private throttle: Throttle;
+
+  constructor(private config: OpenAICompatibleConfig) {
+    this.throttle = new Throttle(config.minIntervalMs);
+  }
 
   async completeJSON<T>(params: CompleteJSONParams<T>): Promise<T> {
-    if (!env.OPENROUTER_API_KEY) {
-      throw new LLMGenerationError(
-        params.task,
-        "OPENROUTER_API_KEY is not set but LLM_PROVIDER=openrouter. Set the key or use LLM_PROVIDER=mock."
+    if (!this.config.apiKey) {
+      console.error(
+        `[${this.config.providerName}] no API key configured for task=${params.task}; falling back to heuristic content.`
       );
+      return params.mockFallback();
     }
 
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -71,7 +67,7 @@ export class OpenRouterClient implements LLMClient {
     // mock mode so the pipeline still produces a structurally valid,
     // honestly-labelled result.
     console.error(
-      `[openrouter] task=${params.task} giving up after retries, falling back to heuristic content: ${String(lastError)}`
+      `[${this.config.providerName}] task=${params.task} giving up after retries, falling back to heuristic content: ${String(lastError)}`
     );
     return params.mockFallback();
   }
@@ -80,16 +76,17 @@ export class OpenRouterClient implements LLMClient {
     messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
     params: CompleteJSONParams<unknown>
   ): Promise<string> {
+    const { providerName, baseUrl, apiKey, model, maxRetries } = this.config;
     return withRetry(
       async () => {
-        const res = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
+        const res = await fetch(`${baseUrl}/chat/completions`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: env.OPENROUTER_MODEL,
+            model,
             temperature: params.temperature ?? 0.4,
             max_tokens: params.maxTokens ?? 1200,
             messages,
@@ -99,7 +96,7 @@ export class OpenRouterClient implements LLMClient {
 
         if (!res.ok) {
           const retryAfterHeader = res.headers.get("retry-after");
-          const err: any = new Error(`OpenRouter HTTP ${res.status}`);
+          const err: any = new Error(`${providerName} HTTP ${res.status}`);
           err.status = res.status;
           err.retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : undefined;
           throw err;
@@ -108,18 +105,18 @@ export class OpenRouterClient implements LLMClient {
         const json = (await res.json()) as any;
         const content = json?.choices?.[0]?.message?.content;
         if (typeof content !== "string" || !content.trim()) {
-          throw new Error("Empty completion from OpenRouter");
+          throw new Error(`Empty completion from ${providerName}`);
         }
         return content;
       },
       {
-        retries: env.LLM_MAX_RETRIES,
+        retries: maxRetries,
         baseDelayMs: 1500,
         maxDelayMs: 20_000,
         isRetryable: (err: any) => RETRYABLE_STATUS.has(err?.status) || err?.name === "TimeoutError" || !err?.status,
         onRetry: (attempt, err: any, delay) => {
           console.warn(
-            `[openrouter] retry ${attempt}/${env.LLM_MAX_RETRIES} after ${Math.round(delay)}ms (status=${err?.status ?? "network"})`
+            `[${providerName}] retry ${attempt}/${maxRetries} after ${Math.round(delay)}ms (status=${err?.status ?? "network"})`
           );
         },
       }
