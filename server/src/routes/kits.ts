@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { Kit } from "../models/Kit.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler, ApiError } from "../middleware/errors.js";
@@ -30,6 +31,12 @@ function summarize(kit: any) {
 }
 
 async function loadOwnedKit(userId: string, kitId: string) {
+  // A malformed id (stale URL, hand-typed, race with a delete) is a clean
+  // 404, not a 500 — checked explicitly rather than relying on catching
+  // Mongoose's CastError further up the stack.
+  if (!mongoose.Types.ObjectId.isValid(kitId)) {
+    throw new ApiError(404, "KIT_NOT_FOUND", "Kit not found.");
+  }
   const kit = await Kit.findOne({ _id: kitId, userId });
   if (!kit) throw new ApiError(404, "KIT_NOT_FOUND", "Kit not found.");
   return kit;
@@ -85,6 +92,7 @@ kitsRouter.get(
         id: kit._id,
         status: kit.status,
         failureReason: kit.failureReason,
+        warnings: kit.warnings,
         generationSteps: kit.generationSteps,
         input: kit.input,
         practiceRecords: kit.practiceRecords,

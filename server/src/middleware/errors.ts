@@ -17,6 +17,15 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     res.status(err.status).json({ error: { code: err.code, message: err.message, details: err.details } });
     return;
   }
+
+  // Mongoose throws a CastError for a malformed ObjectId (e.g. a stale or
+  // hand-typed URL) — that's a client input problem, not a server fault,
+  // so it should surface as a clean 404 rather than a raw 500.
+  if (err && typeof err === "object" && "name" in err && (err as { name?: string }).name === "CastError") {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "The requested resource could not be found." } });
+    return;
+  }
+
   console.error("Unhandled error:", err);
   res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Something went wrong on our end." } });
 }

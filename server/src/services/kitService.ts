@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Kit, type KitDoc } from "../models/Kit.js";
 import { runPipeline, PipelineFatalError, type ResearchContext } from "../pipeline/generateKit.js";
 import { regenerateBrief, regenerateQuestionCategory, regenerateSchedule } from "../pipeline/regenerateSection.js";
+import { friendlyStepLabel } from "../pipeline/stepLabels.js";
 import { checkCoverage } from "../services/coverage/coverageCheck.js";
 import { nextId, resetIdCounters } from "../utils/ids.js";
 import type { ItemOrigin, QuestionCategory } from "../types/kit.js";
@@ -93,14 +94,22 @@ export async function runGenerationForKit(kitId: string): Promise<void> {
     kit.schedule = result.kit.schedule;
     kit.coverage = result.kit.coverage;
     kit.researchContext = result.researchContext;
-    kit.failureReason =
-      result.warnings.length > 0 ? result.warnings.map((w) => `[${w.step}] ${w.message}`).join(" | ") : null;
+    // User-facing: plain-language notes only, never internal step
+    // identifiers or error codes — those are logged separately for
+    // debugging. `warnings` is structured so the UI can render a clean
+    // list; `failureReason` mirrors it as one string for the batch script's
+    // Appendix B output and any plain-text consumer.
+    kit.warnings = result.warnings.map((w) => `${friendlyStepLabel(w.step)}: ${w.message}`);
+    kit.failureReason = kit.warnings.length > 0 ? kit.warnings.join(" ") : null;
     await kit.save();
   } catch (err) {
     await stepWriteChain;
+    console.error(`Kit ${kitId} generation failed:`, err);
     kit.status = "failed";
     kit.failureReason =
-      err instanceof PipelineFatalError ? `${err.code}: ${err.message}` : `UNEXPECTED_ERROR: ${String(err)}`;
+      err instanceof PipelineFatalError
+        ? err.message
+        : "Something went wrong while generating this kit. Please try again.";
     await kit.save();
   }
 }

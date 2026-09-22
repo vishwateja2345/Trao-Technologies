@@ -94,6 +94,8 @@ export interface KitFields {
   status: GenerationStatus;
   generationSteps: GenerationStep[];
   failureReason: string | null;
+  /** Structured, human-friendly notes (one per pipeline warning) for the UI to render as a list. */
+  warnings: string[];
   source: KitSource;
   company_brief: CompanyBrief;
   role: Role;
@@ -127,6 +129,7 @@ const kitSchema = new Schema<KitFields>(
     },
     generationSteps: { type: [generationStepSchema], default: [] },
     failureReason: { type: String, default: null },
+    warnings: { type: [String], default: [] },
 
     source: {
       type: {
