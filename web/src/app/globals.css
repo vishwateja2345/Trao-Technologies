@@ -1,37 +1,137 @@
 @import "tailwindcss";
 
+/*
+  DESIGN WORLD — "Countdown Board"
+  A split-flap departure-board system: the schedule is a literal timetable,
+  status badges are gate-indicator plates, and every data value (day
+  numbers, requirement ids, minutes, difficulty, timestamps) reads in the
+  monospace "flap character" face. Warm bone/paper board casing, not a
+  moody dark-mode terminal — this is a well-lit operations desk, not a
+  night club. One accent only: a burnt-amber "indicator lamp", never neon.
+  See PRODUCT.md / DESIGN.md for the full rationale.
+*/
+
 :root {
-  --background: #f7f7fb;
-  --foreground: #14151a;
-  --surface: #ffffff;
-  --border: #e4e4ec;
-  --brand: #4f46e5;
-  --brand-dark: #4338ca;
+  /* Board casing + panel surfaces (warm, paper-toned — not cool grey) */
+  --board: #f2ecdc;
+  --panel: #fbf8f1;
+  --panel-recessed: #ece3cd;
+
+  /* Ink (warm near-black, never pure black/blue-black) */
+  --ink: #221d15;
+  --ink-muted: #6d6353;
+  --ink-faint: #a89d87;
+
+  /* Structure */
+  --rule: #dccfab;
+  --rule-strong: #c2b28a;
+
+  /* The one accent: burnt amber, like an aged indicator lamp. Tuned to
+     clear 4.5:1 against both --board and --panel text usage. */
+  --amber: #a05414;
+  --amber-strong: #8a4a12;
+  --amber-tint: #f3e2c4;
+
+  /* Status semantics, desaturated to the board's palette */
+  --signal-ok: #3f6b52;
+  --signal-ok-tint: #dde8de;
+  --signal-danger: #963c2c;
+  --signal-danger-tint: #f4ddd4;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-border: var(--border);
-  --color-brand: var(--brand);
-  --color-brand-dark: var(--brand-dark);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-board: var(--board);
+  --color-panel: var(--panel);
+  --color-panel-recessed: var(--panel-recessed);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-amber: var(--amber);
+  --color-amber-strong: var(--amber-strong);
+  --color-amber-tint: var(--amber-tint);
+  --color-signal-ok: var(--signal-ok);
+  --color-signal-ok-tint: var(--signal-ok-tint);
+  --color-signal-danger: var(--signal-danger);
+  --color-signal-danger-tint: var(--signal-danger-tint);
+
+  --font-sans: var(--font-display);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--board);
+  color: var(--ink);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Visible focus ring everywhere, for keyboard navigation (Section 12). */
+/* Visible focus ring everywhere, for keyboard navigation. */
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--amber);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--brand) 25%, transparent);
+  background: color-mix(in srgb, var(--amber) 30%, transparent);
+}
+
+/* A physical split-flap board is built from stacked characters — this
+   utility renders the horizontal seam where the upper and lower half of a
+   flap meet, used sparingly on the components that literally are a board
+   readout (schedule days, flashcards, status plates). */
+.flap-seam {
+  position: relative;
+}
+.flap-seam::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  pointer-events: none;
+}
+
+/* The signature motion: a mechanical flip, like a flap character
+   rotating to its next face. Used on status changes, revealed answers,
+   and tab switches — never as a generic entrance on every element. */
+@keyframes flap-flip {
+  0% {
+    transform: rotateX(90deg);
+    opacity: 0.4;
+  }
+  60% {
+    transform: rotateX(-8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+.flap-flip {
+  animation: flap-flip 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+  backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flap-flip {
+    animation: none;
+  }
+}
+
+@media print {
+  nav,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
 }

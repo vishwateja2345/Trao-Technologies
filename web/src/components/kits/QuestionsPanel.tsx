@@ -88,7 +88,7 @@ export function QuestionsPanel({ kit }: { kit: Kit }) {
           <Card key={key} className="p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">{label}</h3>
+                <h3 className="font-semibold text-ink">{label}</h3>
                 <Badge tone="neutral">{items.length}</Badge>
               </div>
               <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export function QuestionsPanel({ kit }: { kit: Kit }) {
             )}
 
             {items.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-gray-400">
+              <p className="rounded-md border border-dashed border-rule-strong px-3 py-6 text-center text-sm text-ink-faint">
                 No {label.toLowerCase()} questions yet.
               </p>
             ) : (

@@ -5,7 +5,7 @@ export function OriginBadge({ origin, pinned }: { origin: ItemOrigin; pinned?: b
   return (
     <div className="flex items-center gap-1">
       {origin === "edited" && <Badge tone="brand">Edited</Badge>}
-      {origin === "user_added" && <Badge tone="brand">Added by you</Badge>}
+      {origin === "user_added" && <Badge tone="brand">Yours</Badge>}
       {pinned && <Badge tone="warning">Pinned</Badge>}
     </div>
   );

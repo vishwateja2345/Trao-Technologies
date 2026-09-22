@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -20,8 +20,8 @@ import { SchedulePanel } from "@/components/kits/SchedulePanel";
 type Tab = "brief" | "role" | "questions" | "flashcards" | "schedule";
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: "brief", label: "Company brief" },
-  { key: "role", label: "Role & requirements" },
+  { key: "brief", label: "Brief" },
+  { key: "role", label: "Requirements" },
   { key: "questions", label: "Questions" },
   { key: "flashcards", label: "Flashcards" },
   { key: "schedule", label: "Schedule" },
@@ -29,6 +29,9 @@ const TABS: { key: Tab; label: string }[] = [
 
 function KitDetail({ id }: { id: string }) {
   const [tab, setTab] = useState<Tab>("brief");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const router = useRouter();
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["kit", id],
@@ -59,11 +62,12 @@ function KitDetail({ id }: { id: string }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href="/kits" className="text-sm text-gray-400 hover:text-foreground">
+          <Link href="/kits" className="font-mono text-xs uppercase tracking-wider text-ink-faint hover:text-ink">
             ← Back to your kits
           </Link>
-          <h1 className="mt-1 text-xl font-semibold text-foreground">
-            {kit.source.role || "Untitled role"} <span className="text-gray-400">at</span> {kit.source.company || "Unknown company"}
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+            {kit.source.role || "Untitled role"} <span className="font-normal text-ink-faint">at</span>{" "}
+            {kit.source.company || "Unknown company"}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -79,24 +83,53 @@ function KitDetail({ id }: { id: string }) {
       {isGenerating && <GenerationProgress steps={kit.generationSteps} status={kit.status} />}
 
       {kit.status === "failed" && (
-        <ErrorBanner message={kit.failureReason || "Generation failed. The job description or company URL may need adjusting."} />
+        <div className="space-y-3">
+          <ErrorBanner message={kit.failureReason || "Generation failed. The job description or company URL may need adjusting."} />
+          {deleteError && <ErrorBanner message={deleteError} />}
+          <p className="text-sm text-ink-muted">
+            This kit could not be generated. Delete it and create a new one — check that the company URL is reachable and the job
+            description has some real content.
+          </p>
+          <Button
+            variant="danger"
+            loading={deleting}
+            onClick={async () => {
+              setDeleting(true);
+              setDeleteError(null);
+              try {
+                await api.deleteKit(id);
+                router.push("/kits");
+              } catch (err) {
+                setDeleteError(getErrorMessage(err, "Could not delete this kit. Please try again."));
+                setDeleting(false);
+              }
+            }}
+          >
+            Delete this kit
+          </Button>
+        </div>
       )}
 
       {!isGenerating && kit.status !== "failed" && (
         <>
-          {kit.failureReason && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
-              Some steps had gaps: {kit.failureReason}
+          {kit.warnings.length > 0 && (
+            <div className="rounded-md border border-amber-strong bg-amber-tint px-4 py-3 text-sm text-amber-strong" role="status">
+              <p className="font-mono text-xs uppercase tracking-wider">Worth knowing about this kit</p>
+              <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-ink">
+                {kit.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
             </div>
           )}
           {kit.coverage.uncovered_requirement_ids.length > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
+            <div className="rounded-md border border-amber-strong bg-amber-tint px-4 py-3 text-sm text-ink" role="status">
               {kit.coverage.uncovered_requirement_ids.length} must-have requirement(s) still have no question after{" "}
-              {kit.coverage.passes} pass(es). See the Role tab for details.
+              {kit.coverage.passes} pass(es). See the Requirements tab for details.
             </div>
           )}
 
-          <div className="border-b border-border">
+          <div className="border-b border-rule">
             <nav className="-mb-px flex flex-wrap gap-1" role="tablist" aria-label="Kit sections">
               {TABS.map((t) => (
                 <button
@@ -104,8 +137,8 @@ function KitDetail({ id }: { id: string }) {
                   role="tab"
                   aria-selected={tab === t.key}
                   onClick={() => setTab(t.key)}
-                  className={`rounded-t-lg px-3 py-2 text-sm font-medium cursor-pointer ${
-                    tab === t.key ? "border-b-2 border-brand text-brand" : "text-gray-500 hover:text-foreground"
+                  className={`border-b-2 px-3 py-2 font-mono text-xs uppercase tracking-wider cursor-pointer ${
+                    tab === t.key ? "border-amber text-amber-strong" : "border-transparent text-ink-muted hover:text-ink"
                   }`}
                 >
                   {t.label}
@@ -114,7 +147,7 @@ function KitDetail({ id }: { id: string }) {
             </nav>
           </div>
 
-          <div>
+          <div key={tab} className="flap-flip">
             {tab === "brief" && <BriefPanel kit={kit} />}
             {tab === "role" && <RequirementsPanel kit={kit} />}
             {tab === "questions" && <QuestionsPanel kit={kit} />}

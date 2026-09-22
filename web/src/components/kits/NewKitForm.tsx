@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Label, TextArea, TextInput } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -15,15 +15,19 @@ export function NewKitForm() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
+  const daysValid = Number.isInteger(days) && days >= 1 && days <= 120;
+  const canSubmit = jd.trim().length > 0 && companyUrl.trim().length > 0 && daysValid;
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canSubmit) return;
     setError(null);
     setSubmitting(true);
     try {
       const { kit } = await api.createKit({ jd, company_url: companyUrl, days });
       router.push(`/kits/${kit.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not start generation. Please try again.");
+      setError(getErrorMessage(err, "Could not start generation. Please try again."));
       setSubmitting(false);
     }
   }
@@ -41,7 +45,7 @@ export function NewKitForm() {
           value={jd}
           onChange={(e) => setJd(e.target.value)}
         />
-        <p className="mt-1 text-xs text-gray-400">{jd.length.toLocaleString()} characters</p>
+        <p className="mt-1 font-mono text-xs text-ink-faint">{jd.length.toLocaleString()} chars</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -66,9 +70,10 @@ export function NewKitForm() {
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
           />
+          {!daysValid && <p className="mt-1 text-xs text-signal-danger">Enter a whole number of days between 1 and 120.</p>}
         </div>
       </div>
-      <Button type="submit" loading={submitting} disabled={!jd.trim() || !companyUrl.trim()}>
+      <Button type="submit" loading={submitting} disabled={!canSubmit}>
         Generate prep kit
       </Button>
     </form>

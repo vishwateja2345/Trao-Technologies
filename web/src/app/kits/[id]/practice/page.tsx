@@ -17,21 +17,25 @@ function PracticePageBody({ kitId }: { kitId: string }) {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Link href={`/kits/${kitId}`} className="text-sm text-gray-400 hover:text-foreground no-print">
+      <Link href={`/kits/${kitId}`} className="font-mono text-xs uppercase tracking-wider text-ink-faint hover:text-ink no-print">
         ← Back to kit
       </Link>
       <div className="flex items-center justify-between no-print">
-        <h1 className="text-xl font-semibold text-foreground">Practice</h1>
-        <div className="flex gap-1 rounded-lg bg-gray-100 p-1 text-sm">
+        <h1 className="text-xl font-semibold tracking-tight text-ink">Practice</h1>
+        <div className="flex gap-1 rounded-md border border-rule bg-panel p-1">
           <button
             onClick={() => setTab("practice")}
-            className={`rounded-md px-3 py-1 font-medium cursor-pointer ${tab === "practice" ? "bg-white shadow-sm text-foreground" : "text-gray-500"}`}
+            className={`rounded-sm px-3 py-1 font-mono text-xs uppercase tracking-wide cursor-pointer ${
+              tab === "practice" ? "bg-amber-tint text-amber-strong" : "text-ink-muted hover:text-ink"
+            }`}
           >
             Flashcards
           </button>
           <button
             onClick={() => setTab("report")}
-            className={`rounded-md px-3 py-1 font-medium cursor-pointer ${tab === "report" ? "bg-white shadow-sm text-foreground" : "text-gray-500"}`}
+            className={`rounded-sm px-3 py-1 font-mono text-xs uppercase tracking-wide cursor-pointer ${
+              tab === "report" ? "bg-amber-tint text-amber-strong" : "text-ink-muted hover:text-ink"
+            }`}
           >
             Weak spots
           </button>

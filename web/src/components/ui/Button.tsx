@@ -12,11 +12,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
+// Rectangular, plate-like buttons with a hard offset shadow and a visible
+// press state (shadow collapses, button nudges down) — a physical switch,
+// not a soft app-store pill.
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-dark disabled:bg-brand/50",
-  secondary: "bg-white text-foreground border border-border hover:bg-gray-50 disabled:opacity-50",
-  ghost: "bg-transparent text-foreground hover:bg-black/5 disabled:opacity-50",
-  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
+  primary:
+    "bg-amber text-panel border border-amber-strong shadow-[2px_2px_0_var(--amber-strong)] hover:bg-amber-strong active:shadow-none active:translate-x-[2px] active:translate-y-[2px] disabled:bg-ink-faint disabled:border-ink-faint disabled:shadow-none",
+  secondary:
+    "bg-panel text-ink border border-rule-strong shadow-[2px_2px_0_var(--rule-strong)] hover:bg-panel-recessed active:shadow-none active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 disabled:shadow-none",
+  ghost: "bg-transparent text-ink-muted border border-transparent hover:bg-panel-recessed hover:text-ink disabled:opacity-50",
+  danger:
+    "bg-signal-danger text-panel border border-[#6f2c20] shadow-[2px_2px_0_#6f2c20] hover:brightness-110 active:shadow-none active:translate-x-[2px] active:translate-y-[2px] disabled:bg-ink-faint disabled:border-ink-faint disabled:shadow-none",
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
@@ -32,7 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={clsx(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors cursor-pointer",
+        "inline-flex items-center justify-center gap-1.5 rounded font-medium transition-[transform,box-shadow,background-color] cursor-pointer",
         "disabled:cursor-not-allowed",
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

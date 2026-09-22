@@ -52,11 +52,11 @@ export function BriefPanel({ kit }: { kit: Kit }) {
   }
 
   return (
-    <Card className="p-5">
+    <Card seam className="p-5">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold text-foreground">Company brief</h3>
-          <p className="text-sm text-gray-500">{kit.source.company || "Unknown company"}</p>
+          <h3 className="font-semibold text-ink">Company brief</h3>
+          <p className="text-sm text-ink-muted">{kit.source.company || "Unknown company"}</p>
         </div>
         <div className="flex items-center gap-2">
           <OriginBadge origin={kit.company_brief.origin ?? "generated"} pinned={kit.company_brief.pinned} />
@@ -69,7 +69,7 @@ export function BriefPanel({ kit }: { kit: Kit }) {
         </div>
       </div>
 
-      <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400" htmlFor="brief-summary">
+      <label className="mb-1 block font-mono text-[0.6875rem] uppercase tracking-wider text-ink-faint" htmlFor="brief-summary">
         Summary
       </label>
       <TextArea
@@ -80,7 +80,7 @@ export function BriefPanel({ kit }: { kit: Kit }) {
         onBlur={summaryField.flush}
       />
 
-      <label className="mb-1 mt-4 block text-xs font-medium uppercase tracking-wide text-gray-400" htmlFor="brief-what">
+      <label className="mb-1 mt-4 block font-mono text-[0.6875rem] uppercase tracking-wider text-ink-faint" htmlFor="brief-what">
         What they do
       </label>
       <TextArea
@@ -93,10 +93,10 @@ export function BriefPanel({ kit }: { kit: Kit }) {
 
       {kit.company_brief.sources.length > 0 && (
         <div className="mt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Sources</p>
+          <p className="font-mono text-[0.6875rem] uppercase tracking-wider text-ink-faint">Sources</p>
           <ul className="mt-1 space-y-1">
             {kit.company_brief.sources.map((src) => (
-              <li key={src} className="truncate text-xs text-brand">
+              <li key={src} className="truncate text-xs text-amber-strong">
                 <a href={src} target="_blank" rel="noreferrer" className="hover:underline">
                   {src}
                 </a>
@@ -106,7 +106,7 @@ export function BriefPanel({ kit }: { kit: Kit }) {
         </div>
       )}
       {kit.company_brief.sources.length === 0 && (
-        <p className="mt-4 text-xs text-amber-700">No pages could be retrieved from the company site for this brief.</p>
+        <p className="mt-4 text-xs text-amber-strong">No pages could be retrieved from the company site for this brief.</p>
       )}
     </Card>
   );

@@ -89,6 +89,7 @@ export interface Kit {
   id: string;
   status: GenerationStatus;
   failureReason: string | null;
+  warnings: string[];
   generationSteps: GenerationStep[];
   input: { jd: string; company_url: string; days: number };
   practiceRecords: PracticeRecord[];

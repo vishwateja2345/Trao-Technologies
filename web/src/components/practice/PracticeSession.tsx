@@ -15,11 +15,6 @@ export function PracticeSession({ kitId }: { kitId: string }) {
   const queryClient = useQueryClient();
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  // Cards answered in this session, tracked locally so "covered so far"
-  // updates immediately without refetching (a mid-session refetch would
-  // re-sort the queue under the user's feet, since order depends on
-  // confidence).
-  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["practice-queue", kitId],
@@ -31,22 +26,21 @@ export function PracticeSession({ kitId }: { kitId: string }) {
   });
 
   const queue = useMemo(() => data?.queue ?? [], [data]);
-  const coveredCount = useMemo(
-    () => queue.filter((c) => c.times_reviewed > 0 || answeredIds.has(c.flashcard_id)).length,
-    [queue, answeredIds]
-  );
+  // "Covered so far" is this session's progress, not lifetime history — see
+  // git history for why times_reviewed alone is the wrong signal here.
+  const coveredCount = Math.min(index, queue.length);
 
   if (isLoading) return <Spinner label="Loading your flashcards…" />;
-  if (isError) return <p className="text-sm text-red-600">Could not load flashcards for practice.</p>;
+  if (isError) return <p className="text-sm text-signal-danger">Could not load flashcards for practice.</p>;
   if (queue.length === 0) {
     return <EmptyState title="No flashcards yet" description="Generate or add flashcards in the builder before practising." />;
   }
 
   if (index >= queue.length) {
     return (
-      <Card className="p-6 text-center">
-        <h2 className="text-lg font-semibold text-foreground">Session complete 🎉</h2>
-        <p className="mt-1 text-sm text-gray-500">
+      <Card seam className="p-6 text-center">
+        <h2 className="text-lg font-semibold text-ink">Session complete</h2>
+        <p className="mt-1 text-sm text-ink-muted">
           You reviewed {queue.length} card{queue.length === 1 ? "" : "s"} this session.
         </p>
         <Button
@@ -54,7 +48,6 @@ export function PracticeSession({ kitId }: { kitId: string }) {
           onClick={() => {
             setIndex(0);
             setRevealed(false);
-            setAnsweredIds(new Set());
             queryClient.invalidateQueries({ queryKey: ["practice-queue", kitId] });
           }}
         >
@@ -68,32 +61,33 @@ export function PracticeSession({ kitId }: { kitId: string }) {
 
   function onConfidence(confidence: number) {
     recordMutation.mutate({ flashcard_id: card.flashcard_id, confidence });
-    setAnsweredIds((prev) => new Set(prev).add(card.flashcard_id));
     setRevealed(false);
     setIndex((i) => i + 1);
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between text-sm text-gray-500">
+      <div className="flex items-center justify-between font-mono text-xs uppercase tracking-wider text-ink-muted">
         <span>
-          Card {index + 1} of {queue.length}
+          Card {String(index + 1).padStart(2, "0")} / {String(queue.length).padStart(2, "0")}
         </span>
         <span>
-          {coveredCount}/{queue.length} covered so far
+          {coveredCount}/{queue.length} covered
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-        <div className="h-full bg-brand transition-all" style={{ width: `${(index / queue.length) * 100}%` }} />
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-panel-recessed">
+        <div className="h-full bg-amber transition-all" style={{ width: `${(index / queue.length) * 100}%` }} />
       </div>
 
-      <Card className="flex min-h-64 flex-col items-center justify-center gap-4 p-8 text-center">
+      <Card seam className="flex min-h-64 flex-col items-center justify-center gap-4 p-8 text-center">
         {card.last_confidence !== null && (
           <Badge tone="neutral">Last time: {CONFIDENCE_LABELS[card.last_confidence - 1] ?? card.last_confidence}</Badge>
         )}
-        <p className="text-lg font-medium text-foreground">{card.front}</p>
+        <p className="text-lg font-medium text-ink">{card.front}</p>
         {revealed ? (
-          <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-700">{card.back}</p>
+          <p key={card.flashcard_id} className="flap-flip rounded-md bg-panel-recessed p-4 text-sm text-ink">
+            {card.back}
+          </p>
         ) : (
           <Button variant="secondary" onClick={() => setRevealed(true)}>
             Reveal answer
@@ -103,11 +97,12 @@ export function PracticeSession({ kitId }: { kitId: string }) {
 
       {revealed && (
         <div>
-          <p className="mb-2 text-center text-sm text-gray-500">How confident did you feel?</p>
+          <p className="mb-2 text-center font-mono text-xs uppercase tracking-wider text-ink-muted">How confident did you feel?</p>
           <div className="flex justify-center gap-2">
             {CONFIDENCE_LABELS.map((label, i) => (
               <Button key={label} variant="secondary" size="sm" onClick={() => onConfidence(i + 1)}>
-                {i + 1} · {label}
+                <span className="font-mono">{i + 1}</span>
+                <span className="hidden sm:inline"> · {label}</span>
               </Button>
             ))}
           </div>

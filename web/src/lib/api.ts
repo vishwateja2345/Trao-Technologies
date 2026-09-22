@@ -10,6 +10,33 @@ export class ApiError extends Error {
   }
 }
 
+interface ZodFlattenedError {
+  formErrors?: string[];
+  fieldErrors?: Record<string, string[] | undefined>;
+}
+
+/**
+ * Extracts the most specific human-readable message available from a
+ * caught error. Validation failures (400s) carry field-level detail in
+ * `ApiError.details` (a flattened Zod error) — e.g. "Password must be at
+ * least 8 characters" — which is far more useful than the generic
+ * "Invalid registration input." top-level message alone. Every form's
+ * catch block should use this instead of reading `err.message` directly.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const details = err.details as ZodFlattenedError | undefined;
+    const fieldMessages = Object.values(details?.fieldErrors ?? {})
+      .flat()
+      .filter((m): m is string => Boolean(m));
+    const formMessages = details?.formErrors ?? [];
+    const specific = [...formMessages, ...fieldMessages];
+    if (specific.length > 0) return specific.join(" ");
+    return err.message;
+  }
+  return fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,

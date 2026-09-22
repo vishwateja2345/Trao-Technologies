@@ -22,32 +22,20 @@ export function WeakSpotsReport({ kitId, company, role }: { kitId: string; compa
   });
 
   if (isLoading) return <Spinner label="Building your weak-spots report…" />;
-  if (isError || !data) return <p className="text-sm text-red-600">Could not load the weak-spots report.</p>;
+  if (isError || !data) return <p className="text-sm text-signal-danger">Could not load the weak-spots report.</p>;
 
   const report = data.report;
   const priority = report.filter((r) => r.status === "gap" || r.status === "weak");
+  const rest = report.filter((r) => r.status === "unpracticed" || r.status === "solid");
 
   return (
-    <div className="printable-report">
-      <style jsx global>{`
-        @media print {
-          nav,
-          header,
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background: white !important;
-          }
-        }
-      `}</style>
-
+    <div>
       <div className="mb-4 flex items-center justify-between no-print">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Weak spots report</h2>
-          <p className="text-sm text-gray-500">Combines coverage gaps with your practice confidence — one ranked focus list.</p>
+          <h2 className="text-lg font-semibold text-ink">Weak spots report</h2>
+          <p className="text-sm text-ink-muted">Combines coverage gaps with your practice confidence — one ranked focus list.</p>
         </div>
-        <Button variant="secondary" onClick={() => window.print()}>
+        <Button variant="secondary" onClick={() => window.print()} disabled={report.length === 0}>
           Print / save as PDF
         </Button>
       </div>
@@ -56,22 +44,28 @@ export function WeakSpotsReport({ kitId, company, role }: { kitId: string; compa
         <h1 className="text-xl font-semibold">
           Interview prep — weak spots: {role} @ {company}
         </h1>
-        <p className="text-sm text-gray-500">Generated {new Date().toLocaleDateString()}</p>
+        <p className="text-sm text-ink-muted">Generated {new Date().toLocaleDateString()}</p>
       </div>
 
-      {priority.length === 0 ? (
-        <Card className="p-4 text-sm text-emerald-700">
+      {report.length === 0 ? (
+        <Card className="p-4 text-sm text-ink-muted">
+          This kit doesn&apos;t have any requirements to track yet — the job description may have been too short to extract
+          anything from. Add requirements-linked questions or flashcards in the builder, or try regenerating with a fuller job
+          description.
+        </Card>
+      ) : priority.length === 0 ? (
+        <Card className="p-4 text-sm text-signal-ok">
           No gaps or low-confidence requirements right now — nice work. Keep practising to build a review history.
         </Card>
       ) : (
         <Card className="p-4">
-          <p className="mb-3 text-sm font-medium text-foreground">Focus on these {priority.length} first:</p>
-          <ol className="space-y-2">
+          <p className="mb-3 font-mono text-xs uppercase tracking-wider text-ink-faint">Focus on these {priority.length} first</p>
+          <ol className="divide-y divide-rule">
             {priority.map((entry, i) => (
-              <li key={entry.requirement_id} className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
-                <span>
-                  <span className="mr-2 text-gray-400">{i + 1}.</span>
-                  {entry.text}
+              <li key={entry.requirement_id} className="flex items-start justify-between gap-3 py-2.5 text-sm">
+                <span className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-ink-faint">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="text-ink">{entry.text}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
                   <Badge tone={entry.priority === "must" ? "brand" : "neutral"}>{entry.priority}</Badge>
@@ -83,22 +77,22 @@ export function WeakSpotsReport({ kitId, company, role }: { kitId: string; compa
         </Card>
       )}
 
-      <Card className="mt-4 p-4">
-        <p className="mb-3 text-sm font-medium text-foreground">Everything else</p>
-        <ul className="space-y-2 text-sm">
-          {report
-            .filter((r) => r.status === "unpracticed" || r.status === "solid")
-            .map((entry) => (
-              <li key={entry.requirement_id} className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                <span>{entry.text}</span>
+      {rest.length > 0 && (
+        <Card className="mt-4 p-4">
+          <p className="mb-3 font-mono text-xs uppercase tracking-wider text-ink-faint">Everything else</p>
+          <ul className="divide-y divide-rule">
+            {rest.map((entry) => (
+              <li key={entry.requirement_id} className="flex items-start justify-between gap-3 py-2.5 text-sm">
+                <span className="text-ink">{entry.text}</span>
                 <span className="flex shrink-0 items-center gap-1">
                   <Badge tone={entry.priority === "must" ? "brand" : "neutral"}>{entry.priority}</Badge>
                   <Badge tone={STATUS_CONFIG[entry.status].tone}>{STATUS_CONFIG[entry.status].label}</Badge>
                 </span>
               </li>
             ))}
-        </ul>
-      </Card>
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

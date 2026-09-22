@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/Badge";
 import { TextInput } from "@/components/ui/Field";
 import { OriginBadge } from "./OriginBadge";
 
+/**
+ * The schedule rendered as a literal departure-board timetable: each day
+ * is a row with a flap-seam divider between its header (day, focus,
+ * duration — the "flight info" line) and its manifest of questions below.
+ */
 export function SchedulePanel({ kit }: { kit: Kit }) {
   const queryClient = useQueryClient();
   const [days, setDays] = useState(kit.schedule.days_available);
@@ -37,18 +42,20 @@ export function SchedulePanel({ kit }: { kit: Kit }) {
     <Card className="p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-foreground">Study schedule</h3>
-          <p className="text-sm text-gray-500">{kit.schedule.days_available} day(s) requested</p>
+          <h3 className="font-semibold text-ink">Study schedule</h3>
+          <p className="font-mono text-xs text-ink-muted">
+            {String(kit.schedule.days_available).padStart(2, "0")} DAY{kit.schedule.days_available === 1 ? "" : "S"} REQUESTED
+          </p>
         </div>
         <div className="flex items-end gap-2">
           <OriginBadge origin={kit.schedule.origin ?? "generated"} pinned={kit.schedule.pinned} />
-          <label className="text-xs text-gray-500">
+          <label className="font-mono text-[0.6875rem] uppercase tracking-wider text-ink-faint">
             Days
             <TextInput
               type="number"
               min={1}
               max={120}
-              className="mt-1 w-20"
+              className="mt-1 w-20 font-mono"
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
             />
@@ -61,17 +68,23 @@ export function SchedulePanel({ kit }: { kit: Kit }) {
 
       <ol className="space-y-3">
         {kit.schedule.days.map((day) => (
-          <li key={day.day} className="rounded-lg border border-border p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-medium text-foreground">
-                Day {day.day} · {day.focus}
+          <li key={day.day} className="flap-seam rounded-md border border-rule bg-panel">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <span className="flex items-baseline gap-3">
+                <span className="font-mono text-sm font-semibold text-amber-strong">DAY {String(day.day).padStart(2, "0")}</span>
+                <span className="text-sm text-ink">{day.focus}</span>
               </span>
               <Badge tone="neutral">{day.minutes} min</Badge>
             </div>
-            <ul className="space-y-1 text-sm text-gray-600">
+            <ul className="space-y-1 px-4 py-2.5 text-sm text-ink-muted">
               {day.question_ids.map((qid) => {
                 const q = questionById.get(qid);
-                return <li key={qid}>{q ? q.prompt : `(question ${qid})`}</li>;
+                return (
+                  <li key={qid} className="flex items-baseline gap-2">
+                    <span className="font-mono text-xs text-ink-faint">{qid}</span>
+                    <span>{q ? q.prompt : `(question ${qid})`}</span>
+                  </li>
+                );
               })}
             </ul>
           </li>

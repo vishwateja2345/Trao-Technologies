@@ -44,23 +44,24 @@ export function QuestionCard({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`rounded-lg border border-border bg-white p-3 ${isDragging ? "opacity-60 shadow-lg" : ""}`}
+      className={`rounded-md border border-rule bg-panel p-3 ${isDragging ? "opacity-60 shadow-[3px_3px_0_var(--rule-strong)]" : ""}`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <button
           {...attributes}
           {...listeners}
-          className="mt-1 cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+          className="mt-1 cursor-grab text-ink-faint hover:text-ink-muted active:cursor-grabbing"
           aria-label="Drag to reorder"
           title="Drag to reorder"
         >
           ⠿
         </button>
         <div className="flex flex-1 flex-wrap items-center gap-1">
+          <span className="font-mono text-xs text-ink-faint">{question.id}</span>
           <OriginBadge origin={question.origin} pinned={question.pinned} />
           <Badge tone="neutral">Difficulty {question.difficulty}</Badge>
           {linkedReqs.map((r) => (
-            <Badge key={r.id} tone="brand" className="max-w-[10rem] truncate" title={r.text}>
+            <Badge key={r.id} tone="brand" prose className="max-w-[10rem] truncate" title={r.text}>
               {r.text}
             </Badge>
           ))}
@@ -86,10 +87,10 @@ export function QuestionCard({
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          <label className="text-gray-400">
+          <label className="text-ink-faint">
             Difficulty
             <Select
-              className="ml-1 inline-block w-auto py-1"
+              className="ml-1 inline-block w-auto py-1 font-mono text-xs"
               value={question.difficulty}
               onChange={(e) => editMutation.mutate({ difficulty: Number(e.target.value) })}
             >
@@ -98,10 +99,10 @@ export function QuestionCard({
               <option value={3}>3</option>
             </Select>
           </label>
-          <label className="text-gray-400">
+          <label className="text-ink-faint">
             Category
             <Select
-              className="ml-1 inline-block w-auto py-1"
+              className="ml-1 inline-block w-auto py-1 font-mono text-xs uppercase tracking-wide"
               value={question.category}
               onChange={(e) => editMutation.mutate({ category: e.target.value })}
             >

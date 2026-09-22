@@ -1,7 +1,27 @@
 import clsx from "clsx";
 
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+// A "flap panel": crisp rectangle, thin rule border, hard offset shadow —
+// a physical board module, not a soft floating card. `seam` renders the
+// horizontal split-flap divider for components that read as literal board
+// readouts (schedule days, flashcards).
+export function Card({
+  className,
+  seam,
+  children,
+}: {
+  className?: string;
+  seam?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className={clsx("rounded-xl border border-border bg-surface shadow-sm", className)}>{children}</div>
+    <div
+      className={clsx(
+        "rounded-md border border-rule bg-panel shadow-[3px_3px_0_var(--rule)]",
+        seam && "flap-seam",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }

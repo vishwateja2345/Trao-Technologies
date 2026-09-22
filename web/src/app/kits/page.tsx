@@ -27,19 +27,21 @@ function KitsDashboard() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <section>
-        <h1 className="text-lg font-semibold text-foreground">Create a prep kit</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-xl font-semibold tracking-tight text-ink">Create a prep kit</h1>
+        <p className="mt-1 text-sm text-ink-muted">
           Paste a job description and a company website, or prepare for several roles at once.
         </p>
-        <Card className="mt-4 p-5">
-          <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm" role="tablist" aria-label="Kit creation mode">
+        <Card className="mt-4 overflow-hidden">
+          <div className="flex border-b border-rule" role="tablist" aria-label="Kit creation mode">
             <button
               role="tab"
               aria-selected={tab === "single"}
               onClick={() => setTab("single")}
-              className={`flex-1 rounded-md py-1.5 font-medium cursor-pointer ${tab === "single" ? "bg-white shadow-sm text-foreground" : "text-gray-500"}`}
+              className={`flex-1 border-b-2 py-2.5 font-mono text-xs uppercase tracking-wider cursor-pointer ${
+                tab === "single" ? "border-amber text-amber-strong" : "border-transparent text-ink-muted hover:text-ink"
+              }`}
             >
               Single role
             </button>
@@ -47,17 +49,19 @@ function KitsDashboard() {
               role="tab"
               aria-selected={tab === "batch"}
               onClick={() => setTab("batch")}
-              className={`flex-1 rounded-md py-1.5 font-medium cursor-pointer ${tab === "batch" ? "bg-white shadow-sm text-foreground" : "text-gray-500"}`}
+              className={`flex-1 border-b-2 py-2.5 font-mono text-xs uppercase tracking-wider cursor-pointer ${
+                tab === "batch" ? "border-amber text-amber-strong" : "border-transparent text-ink-muted hover:text-ink"
+              }`}
             >
-              Upload multiple (file)
+              Upload multiple
             </button>
           </div>
-          {tab === "single" ? <NewKitForm /> : <BatchUploadForm />}
+          <div className="p-5">{tab === "single" ? <NewKitForm /> : <BatchUploadForm />}</div>
         </Card>
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-foreground">Your kits</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-ink">Your kits</h2>
         <div className="mt-4">
           {isLoading && <Spinner label="Loading your kits…" />}
           {isError && <ErrorBanner message="Could not load your kits." onRetry={() => refetch()} />}
@@ -65,11 +69,13 @@ function KitsDashboard() {
             <EmptyState title="No kits yet" description="Create your first prep kit above to get started." />
           )}
           {!isLoading && data && data.kits.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {data.kits.map((kit) => (
-                <KitCard key={kit.id} kit={kit} />
-              ))}
-            </div>
+            <Card className="overflow-hidden">
+              <ul className="divide-y divide-rule">
+                {data.kits.map((kit) => (
+                  <KitCard key={kit.id} kit={kit} />
+                ))}
+              </ul>
+            </Card>
           )}
         </div>
       </section>
