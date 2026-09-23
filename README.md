@@ -8,6 +8,19 @@ lets you reshape any of it and practise against it.
 Built for the Trao "AI Interview Prep Kit" full-stack assessment (brief
 `FS-AI-INTERVIEW-01`).
 
+## 0. Demo video
+
+[`docs/demo/prepkit-walkthrough.mp4`](docs/demo/prepkit-walkthrough.mp4) — a real, unscripted-behavior walkthrough
+(~3 minutes) recorded against the live app: sign in → paste a JD for a real company
+(Notion) → live generation progress → the grounded company brief → requirements
+must/nice tagging → deleting a question to create a live coverage gap, watching
+the deterministic coverage check catch it, then regenerating that category to
+close the gap → inline question editing, drag reorder, and manual add, with
+edits proven to survive a category regeneration → flashcards → the deterministic
+study schedule → practice mode with confidence rating → the custom Weak Spots
+Report. No steps are staged with fake data — every screen is the actual running
+app, including a real crawl of `notion.so` and real DeepSeek generations.
+
 ## 1. Tech stack
 
 | Layer | Choice | Why |
